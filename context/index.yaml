@@ -1,0 +1,8 @@
+---
+description: "Composable process signal handling for Ruby."
+metadata:
+  documentation_uri: "https://socketry.github.io/async-signals/"
+files:
+  - path: getting-started.md
+    title: Getting Started
+    description: This guide explains how to use async-signals to coordinate process signal handling.
