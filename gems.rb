@@ -23,6 +23,10 @@ group :test do
 	gem "sus"
 	gem "covered"
 	
+	gem "rubocop"
+	gem "rubocop-md"
+	gem "rubocop-socketry"
+	
 	gem "bake-test"
 	gem "bake-test-external"
 end
