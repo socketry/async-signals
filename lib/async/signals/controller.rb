@@ -96,11 +96,12 @@ module Async
 			# Create a new signal subscription.
 			# @returns [Subscription] The new subscription.
 			def subscribe
-				Subscription.new(self)
+				Subscription.new
 			end
 			
 			# Install a subscription.
 			# @parameter subscription [Subscription] The subscription to install.
+			# @yields {|subscription| ...} The block to run while the subscription is installed.
 			# @returns [Registration] The active registration.
 			def install(subscription)
 				traps = subscription.traps.dup.freeze
@@ -113,7 +114,17 @@ module Async
 					update_dispatch
 				end
 				
-				return Registration.new(self, traps)
+				registration = Registration.new(self, traps)
+				
+				if block_given?
+					begin
+						return yield subscription
+					ensure
+						registration.close
+					end
+				else
+					return registration
+				end
 			end
 			
 			# Dispatch a signal to all currently active handlers.
@@ -142,6 +153,18 @@ module Async
 						remove_signal(signal, handler)
 					end
 					
+					update_dispatch
+				end
+			end
+			
+			# Reset all installed signal traps to their previous handlers.
+			def reset!
+				@mutex.synchronize do
+					@states.each do |signal, state|
+						::Signal.trap(signal, state.previous)
+					end
+					
+					@states.clear
 					update_dispatch
 				end
 			end

@@ -7,8 +7,7 @@ require "async/signals/controller"
 require "async/signals/subscription"
 
 describe Async::Signals::Subscription do
-	let(:controller) {Async::Signals::Controller.new}
-	let(:subscription) {subject.new(controller)}
+	let(:subscription) {subject.new}
 	
 	with "#trap" do
 		it "normalizes symbolic signal names" do

@@ -8,14 +8,9 @@ module Async
 		# Represents a configurable set of signal traps.
 		class Subscription
 			# Initialize the subscription.
-			# @parameter controller [Controller] The controller that will install this subscription.
-			def initialize(controller)
-				@controller = controller
+			def initialize
 				@traps = {}
 			end
-			
-			# @attribute [Controller] The controller that will install this subscription.
-			attr :controller
 			
 			# @attribute [Hash(Integer, Proc | Nil)] The configured signal traps.
 			attr :traps
@@ -30,16 +25,6 @@ module Async
 			# @parameter signal [Symbol | String | Integer] The signal to ignore.
 			def ignore(signal)
 				trap(signal)
-			end
-			
-			# Install this subscription for the duration of the block.
-			# @yields {...} The block to run while this subscription is installed.
-			def install
-				registration = @controller.install(self)
-				
-				yield self
-			ensure
-				registration&.close
 			end
 			
 			private

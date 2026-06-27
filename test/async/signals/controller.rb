@@ -17,7 +17,7 @@ describe Async::Signals::Controller do
 			events << signal
 		end
 		
-		subscription.install do
+		controller.install(subscription) do
 			::Process.kill(:USR1, ::Process.pid)
 			
 			expect(events.pop).to be == ::Signal.list.fetch("USR1")
@@ -38,8 +38,8 @@ describe Async::Signals::Controller do
 			second << signal
 		end
 		
-		first_subscription.install do
-			second_subscription.install do
+		controller.install(first_subscription) do
+			controller.install(second_subscription) do
 				::Process.kill(:USR1, ::Process.pid)
 				
 				expect(first.pop).to be == ::Signal.list.fetch("USR1")
@@ -62,8 +62,8 @@ describe Async::Signals::Controller do
 			second << signal
 		end
 		
-		first_subscription.install do
-			second_subscription.install do
+		controller.install(first_subscription) do
+			controller.install(second_subscription) do
 				::Process.kill(:USR1, ::Process.pid)
 				expect(first.pop).to be == ::Signal.list.fetch("USR1")
 				
@@ -81,7 +81,7 @@ describe Async::Signals::Controller do
 		subscription = controller.subscribe
 		subscription.ignore(:USR1)
 		
-		subscription.install do
+		controller.install(subscription) do
 			expect do
 				::Process.kill(:USR1, ::Process.pid)
 			end.not.to raise_exception
@@ -99,8 +99,8 @@ describe Async::Signals::Controller do
 			events << signal
 		end
 		
-		ignored.install do
-			handled.install do
+		controller.install(ignored) do
+			controller.install(handled) do
 				::Process.kill(:USR1, ::Process.pid)
 				
 				expect(events.pop).to be == ::Signal.list.fetch("USR1")
@@ -118,6 +118,12 @@ describe Async::Signals::Controller do
 			registration.close
 			registration.close
 		end.not.to raise_exception
+	end
+	
+	it "returns the block result when installing a subscription" do
+		subscription = controller.subscribe
+		
+		expect(controller.install(subscription){:result}).to be == :result
 	end
 	
 	it "uses a snapshot of the subscription traps" do
@@ -153,7 +159,7 @@ describe Async::Signals::Controller do
 			raise error
 		end
 		
-		subscription.install do
+		controller.install(subscription) do
 			expect do
 				::Process.kill(:USR1, ::Process.pid)
 			end.to raise_exception(RuntimeError)
@@ -170,7 +176,7 @@ describe Async::Signals::Controller do
 			subscription = controller.subscribe
 			subscription.ignore(:USR1)
 			
-			subscription.install do
+			controller.install(subscription) do
 				::Process.kill(:USR1, ::Process.pid)
 				
 				expect do
