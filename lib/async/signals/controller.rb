@@ -84,7 +84,7 @@ module Async
 			class Registration
 				# Initialize the registration.
 				# @parameter controller [Controller] The controller that owns this registration.
-				# @parameter handlers [Hash(Integer, Proc | Nil)] The handlers that were installed.
+				# @parameter handlers [Hash(String, Proc | Nil)] The handlers that were installed.
 				def initialize(controller, handlers)
 					@controller = controller
 					@handlers = handlers
@@ -134,11 +134,13 @@ module Async
 			end
 			
 			# Dispatch a signal to all currently active handlers.
-			# @parameter signal [Integer] The signal number to dispatch.
+			# @parameter signal [String] The signal name to dispatch.
 			def dispatch(signal)
+				number = ::Signal.list.fetch(signal)
+				
 				@dispatch[signal]&.each do |handler|
 					begin
-						handler.call(signal)
+						handler.call(number)
 					rescue Exception => error
 						warn "Async::Signals handler failed: #{error.class}: #{error.message}"
 					end
@@ -147,7 +149,7 @@ module Async
 			
 			# Remove a set of installed handlers.
 			# @parameter registration [Registration] The registration that owns the handlers.
-			# @parameter handlers [Hash(Integer, Proc | Nil)] The handlers to remove.
+			# @parameter handlers [Hash(String, Proc | Nil)] The handlers to remove.
 			def remove(registration, handlers)
 				@mutex.synchronize do
 					handlers.each_key do |signal|

@@ -27,20 +27,22 @@ module Async
 			end
 			
 			# Iterate over the configured signal handlers.
-			# @yields {|signal, handler| ...} The signal number and the handler, or `nil` if ignored.
+			# @yields {|signal, handler| ...} The signal name and the handler, or `nil` if ignored.
 			def each(&block)
 				@signals.each(&block)
 			end
 			
 			private
 			
-			# Normalize signals so the controller has one key per OS signal. This ensures
-			# equivalent forms like `:USR1`, `"USR1"` and `"SIGUSR1"` share the same
-			# installed trap and restoration lifecycle.
+			# Normalize signals so the controller has one portable key per OS signal.
+			# This ensures equivalent forms like `:USR1`, `"USR1"` and `"SIGUSR1"` share
+			# the same installed trap and restoration lifecycle.
 			def normalize(signal)
 				case signal
 				when Integer
-					signal
+					::Signal.list.invert.fetch(signal) do
+						raise ArgumentError, "unsupported signal number `#{signal}'"
+					end
 				when Symbol, String
 					name = signal.to_s
 					name = name.delete_prefix("SIG")
@@ -48,6 +50,8 @@ module Async
 					::Signal.list.fetch(name) do
 						raise ArgumentError, "unsupported signal `SIG#{name}'"
 					end
+					
+					name
 				else
 					raise ArgumentError, "bad signal type #{signal.class}"
 				end

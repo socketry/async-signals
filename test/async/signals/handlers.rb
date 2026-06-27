@@ -16,7 +16,7 @@ describe Async::Signals::Handlers do
 			handlers.trap(:USR1, &handler)
 			
 			expect(handlers.to_h).to have_keys(
-				::Signal.list.fetch("USR1") => be == handler
+				"USR1" => be == handler
 			)
 		end
 		
@@ -26,7 +26,7 @@ describe Async::Signals::Handlers do
 			handlers.trap("SIGUSR1", &handler)
 			
 			expect(handlers.to_h).to have_keys(
-				::Signal.list.fetch("USR1") => be == handler
+				"USR1" => be == handler
 			)
 		end
 		
@@ -34,7 +34,7 @@ describe Async::Signals::Handlers do
 			handlers.trap(:USR1)
 			
 			expect(handlers.to_h).to have_keys(
-				::Signal.list.fetch("USR1") => be_nil
+				"USR1" => be_nil
 			)
 		end
 		
@@ -45,8 +45,14 @@ describe Async::Signals::Handlers do
 			handlers.trap(signal, &handler)
 			
 			expect(handlers.to_h).to have_keys(
-				signal => be == handler
+				"USR1" => be == handler
 			)
+		end
+		
+		it "rejects unsupported signal numbers" do
+			expect do
+				handlers.trap(-1)
+			end.to raise_exception(ArgumentError, message: be =~ /unsupported signal number/)
 		end
 		
 		it "rejects unsupported signal names" do
