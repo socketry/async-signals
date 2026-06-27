@@ -230,17 +230,15 @@ describe Async::Signals::Controller do
 			handled << signal
 		end
 		
-		mock(controller) do |mock|
-			mock.replace(:warn) do |message|
-				warnings << message
-			end
-			
-			controller.install(failing_handlers) do
-				controller.install(handled_handlers) do
-					expect do
-						::Process.kill(:USR1, ::Process.pid)
-					end.not.to raise_exception
-				end
+		controller.define_singleton_method(:warn) do |message|
+			warnings << message
+		end
+		
+		controller.install(failing_handlers) do
+			controller.install(handled_handlers) do
+				expect do
+					::Process.kill(:USR1, ::Process.pid)
+				end.not.to raise_exception
 			end
 		end
 		
