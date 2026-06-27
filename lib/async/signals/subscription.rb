@@ -44,6 +44,9 @@ module Async
 			
 			private
 			
+			# Normalize signals so the controller has one key per OS signal. This ensures
+			# equivalent forms like `:USR1`, `"USR1"` and `"SIGUSR1"` share the same
+			# installed trap and restoration lifecycle.
 			def normalize(signal)
 				case signal
 				when Integer
