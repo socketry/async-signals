@@ -1,11 +1,6 @@
 # MIT License
 
-Copyright, 2017-2026, by Samuel Williams.  
-Copyright, 2019, by Yuji Yaginuma.  
-Copyright, 2020, by Olle Jonsson.  
-Copyright, 2020, by Juan Antonio Martín Lucas.  
-Copyright, 2022, by Anton Sozontov.  
-Copyright, 2025, by Marc-André Cournoyer.  
+Copyright, 2026, by Samuel Williams.  
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

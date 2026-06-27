@@ -7,7 +7,6 @@ require_relative "signals/version"
 require_relative "signals/handlers"
 require_relative "signals/controller"
 
-# @namespace
 module Async
 	# Provides composable process signal handling.
 	module Signals
