@@ -146,6 +146,8 @@ Use block-form installation when possible so registrations are closed automatica
 
 Avoid calling `Signal.trap` for the same signals while `async-signals` handlers are installed. Direct calls to `Signal.trap` replace process-wide traps and can bypass the controller.
 
+Keep signal handlers thread safe. Ruby implementations may dispatch signal traps from an implementation-specific thread, so handlers should avoid mutating shared state directly. Prefer doing minimal work in the handler and forwarding the event to a thread-safe mechanism such as `Thread::Queue`.
+
 ## Troubleshooting
 
 If a handler is not invoked, check that the handler set is installed at the time the signal is delivered. Handler sets are only active inside the `Async::Signals.install` block, or until the returned registration is closed.

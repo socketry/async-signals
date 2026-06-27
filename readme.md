@@ -11,6 +11,7 @@ Composable process signal handling for Ruby.
   - Supports scoped ignore handlers for specific signals.
   - Restores previous signal traps when handlers are removed.
   - Resets inherited signal state in forked children on Ruby implementations with `Process._fork`.
+  - Documents thread-safe signal handler design for portable signal delivery.
 
 ## Usage
 
