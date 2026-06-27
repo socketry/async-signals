@@ -4,7 +4,7 @@
 # Copyright, 2026, by Samuel Williams.
 
 require_relative "signals/version"
-require_relative "signals/subscription"
+require_relative "signals/handlers"
 require_relative "signals/controller"
 
 # @namespace
@@ -19,17 +19,11 @@ module Async
 			CONTROLLER
 		end
 		
-		# Create a new signal subscription.
-		# @returns [Subscription] The new subscription.
-		def self.subscribe
-			Subscription.new
-		end
-		
-		# Install a subscription using the process-wide signal controller.
-		# @parameter subscription [Subscription] The subscription to install.
+		# Install signal handlers using the process-wide signal controller.
+		# @parameter handlers [Handlers] The handlers to install.
 		# @returns [Controller::Registration] The active registration.
-		def self.install(subscription, &block)
-			CONTROLLER.install(subscription, &block)
+		def self.install(handlers, &block)
+			CONTROLLER.install(handlers, &block)
 		end
 		
 		# Reset the process-wide signal controller.

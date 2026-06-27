@@ -18,22 +18,16 @@ describe Async::Signals do
 		end
 	end
 	
-	with ".subscribe" do
-		it "creates a subscription" do
-			expect(subject.subscribe).to be_a(subject::Subscription)
-		end
-	end
-	
 	with ".install" do
-		it "installs a subscription using the default controller" do
+		it "installs handlers using the default controller" do
 			events = ::Thread::Queue.new
-			subscription = subject.subscribe
+			handlers = subject::Handlers.new
 			
-			subscription.trap(:USR1) do |signal|
+			handlers.trap(:USR1) do |signal|
 				events << signal
 			end
 			
-			subject.install(subscription) do
+			subject.install(handlers) do
 				::Process.kill(:USR1, ::Process.pid)
 				
 				expect(events.pop).to be == ::Signal.list.fetch("USR1")
@@ -41,25 +35,25 @@ describe Async::Signals do
 		end
 		
 		it "returns the block result" do
-			subscription = subject.subscribe
+			handlers = subject::Handlers.new
 			
-			expect(subject.install(subscription){:result}).to be == :result
+			expect(subject.install(handlers){:result}).to be == :result
 		end
 	end
 	
 	with ".reset!" do
-		it "removes installed subscriptions from the default controller" do
+		it "removes installed handlers from the default controller" do
 			events = ::Thread::Queue.new
 			original = ::Signal.trap(:USR1, "IGNORE")
 			
 			begin
-				subscription = subject.subscribe
+				handlers = subject::Handlers.new
 				
-				subscription.trap(:USR1) do |signal|
+				handlers.trap(:USR1) do |signal|
 					events << signal
 				end
 				
-				registration = subject.install(subscription)
+				registration = subject.install(handlers)
 				
 				subject.reset!
 				
@@ -84,13 +78,13 @@ describe Async::Signals do
 				input, output = IO.pipe
 				Signal.trap(:USR1, "IGNORE")
 				
-				subscription = Async::Signals.subscribe
-				subscription.trap(:USR1) do
+				handlers = Async::Signals::Handlers.new
+				handlers.trap(:USR1) do
 					output.write("handled")
 					output.flush
 				end
 				
-				Async::Signals.install(subscription) do
+				Async::Signals.install(handlers) do
 					pid = Process.fork do
 						input.close
 						

@@ -4,42 +4,42 @@
 # Copyright, 2026, by Samuel Williams.
 
 require "async/signals/controller"
-require "async/signals/subscription"
+require "async/signals/handlers"
 
 describe Async::Signals::Controller do
 	let(:controller) {subject.new}
 	
-	it "can deliver one signal to one subscription" do
+	it "can deliver one signal to one handler set" do
 		events = ::Thread::Queue.new
-		subscription = controller.subscribe
+		handlers = Async::Signals::Handlers.new
 		
-		subscription.trap(:USR1) do |signal|
+		handlers.trap(:USR1) do |signal|
 			events << signal
 		end
 		
-		controller.install(subscription) do
+		controller.install(handlers) do
 			::Process.kill(:USR1, ::Process.pid)
 			
 			expect(events.pop).to be == ::Signal.list.fetch("USR1")
 		end
 	end
 	
-	it "can deliver overlapping signals to multiple subscriptions" do
+	it "can deliver overlapping signals to multiple handler sets" do
 		first = ::Thread::Queue.new
 		second = ::Thread::Queue.new
 		
-		first_subscription = controller.subscribe
-		first_subscription.trap(:USR1) do |signal|
+		first_handlers = Async::Signals::Handlers.new
+		first_handlers.trap(:USR1) do |signal|
 			first << signal
 		end
 		
-		second_subscription = controller.subscribe
-		second_subscription.trap(:USR1) do |signal|
+		second_handlers = Async::Signals::Handlers.new
+		second_handlers.trap(:USR1) do |signal|
 			second << signal
 		end
 		
-		controller.install(first_subscription) do
-			controller.install(second_subscription) do
+		controller.install(first_handlers) do
+			controller.install(second_handlers) do
 				::Process.kill(:USR1, ::Process.pid)
 				
 				expect(first.pop).to be == ::Signal.list.fetch("USR1")
@@ -48,22 +48,22 @@ describe Async::Signals::Controller do
 		end
 	end
 	
-	it "can deliver different signals to different subscriptions" do
+	it "can deliver different signals to different handler sets" do
 		first = ::Thread::Queue.new
 		second = ::Thread::Queue.new
 		
-		first_subscription = controller.subscribe
-		first_subscription.trap(:USR1) do |signal|
+		first_handlers = Async::Signals::Handlers.new
+		first_handlers.trap(:USR1) do |signal|
 			first << signal
 		end
 		
-		second_subscription = controller.subscribe
-		second_subscription.trap(:USR2) do |signal|
+		second_handlers = Async::Signals::Handlers.new
+		second_handlers.trap(:USR2) do |signal|
 			second << signal
 		end
 		
-		controller.install(first_subscription) do
-			controller.install(second_subscription) do
+		controller.install(first_handlers) do
+			controller.install(second_handlers) do
 				::Process.kill(:USR1, ::Process.pid)
 				expect(first.pop).to be == ::Signal.list.fetch("USR1")
 				
@@ -78,23 +78,23 @@ describe Async::Signals::Controller do
 	end
 	
 	it "can ignore a signal" do
-		subscription = controller.subscribe
-		subscription.ignore(:USR1)
+		handlers = Async::Signals::Handlers.new
+		handlers.ignore(:USR1)
 		
-		controller.install(subscription) do
+		controller.install(handlers) do
 			expect do
 				::Process.kill(:USR1, ::Process.pid)
 			end.not.to raise_exception
 		end
 	end
 	
-	it "does not let ignore suppress another subscription" do
+	it "does not let ignore suppress another handler set" do
 		events = ::Thread::Queue.new
 		
-		ignored = controller.subscribe
+		ignored = Async::Signals::Handlers.new
 		ignored.ignore(:USR1)
 		
-		handled = controller.subscribe
+		handled = Async::Signals::Handlers.new
 		handled.trap(:USR1) do |signal|
 			events << signal
 		end
@@ -109,10 +109,10 @@ describe Async::Signals::Controller do
 	end
 	
 	it "can close a registration more than once" do
-		subscription = controller.subscribe
-		subscription.ignore(:USR1)
+		handlers = Async::Signals::Handlers.new
+		handlers.ignore(:USR1)
 		
-		registration = controller.install(subscription)
+		registration = controller.install(handlers)
 		
 		expect do
 			registration.close
@@ -120,24 +120,24 @@ describe Async::Signals::Controller do
 		end.not.to raise_exception
 	end
 	
-	it "returns the block result when installing a subscription" do
-		subscription = controller.subscribe
+	it "returns the block result when installing handlers" do
+		handlers = Async::Signals::Handlers.new
 		
-		expect(controller.install(subscription){:result}).to be == :result
+		expect(controller.install(handlers){:result}).to be == :result
 	end
 	
-	it "uses a snapshot of the subscription traps" do
+	it "uses a snapshot of the handlers" do
 		events = ::Thread::Queue.new
 		original = ::Signal.trap(:USR1, "IGNORE")
 		
 		begin
-			subscription = controller.subscribe
-			subscription.trap(:USR1) do |signal|
+			handlers = Async::Signals::Handlers.new
+			handlers.trap(:USR1) do |signal|
 				events << signal
 			end
 			
-			registration = controller.install(subscription)
-			subscription.ignore(:USR1)
+			registration = controller.install(handlers)
+			handlers.ignore(:USR1)
 			
 			registration.close
 			
@@ -154,12 +154,12 @@ describe Async::Signals::Controller do
 	it "propagates handler errors" do
 		error = RuntimeError.new("handler failed")
 		
-		subscription = controller.subscribe
-		subscription.trap(:USR1) do
+		handlers = Async::Signals::Handlers.new
+		handlers.trap(:USR1) do
 			raise error
 		end
 		
-		controller.install(subscription) do
+		controller.install(handlers) do
 			expect do
 				::Process.kill(:USR1, ::Process.pid)
 			end.to raise_exception(RuntimeError)
@@ -173,10 +173,10 @@ describe Async::Signals::Controller do
 		end
 		
 		begin
-			subscription = controller.subscribe
-			subscription.ignore(:USR1)
+			handlers = Async::Signals::Handlers.new
+			handlers.ignore(:USR1)
 			
-			controller.install(subscription) do
+			controller.install(handlers) do
 				::Process.kill(:USR1, ::Process.pid)
 				
 				expect do

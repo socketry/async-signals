@@ -5,26 +5,31 @@
 
 module Async
 	module Signals
-		# Represents a configurable set of signal traps.
-		class Subscription
-			# Initialize the subscription.
+		# Represents a configurable set of signal handlers.
+		class Handlers
+			include Enumerable
+			
+			# Initialize the handlers.
 			def initialize
-				@traps = {}
+				@signals = {}
 			end
 			
-			# @attribute [Hash(Integer, Proc | Nil)] The configured signal traps.
-			attr :traps
-			
-			# Trap a signal while this subscription is installed.
+			# Trap a signal while these handlers are installed.
 			# @parameter signal [Symbol | String | Integer] The signal to trap.
 			def trap(signal, &block)
-				@traps[normalize(signal)] = block
+				@signals[normalize(signal)] = block
 			end
 			
-			# Ignore a signal while this subscription is installed.
+			# Ignore a signal while these handlers are installed.
 			# @parameter signal [Symbol | String | Integer] The signal to ignore.
 			def ignore(signal)
 				trap(signal)
+			end
+			
+			# Iterate over the configured signal handlers.
+			# @yields {|signal, handler| ...} The signal number and the handler, or `nil` if ignored.
+			def each(&block)
+				@signals.each(&block)
 			end
 			
 			private

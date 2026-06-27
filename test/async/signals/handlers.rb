@@ -4,18 +4,18 @@
 # Copyright, 2026, by Samuel Williams.
 
 require "async/signals/controller"
-require "async/signals/subscription"
+require "async/signals/handlers"
 
-describe Async::Signals::Subscription do
-	let(:subscription) {subject.new}
+describe Async::Signals::Handlers do
+	let(:handlers) {subject.new}
 	
 	with "#trap" do
 		it "normalizes symbolic signal names" do
 			handler = proc{}
 			
-			subscription.trap(:USR1, &handler)
+			handlers.trap(:USR1, &handler)
 			
-			expect(subscription.traps).to have_keys(
+			expect(handlers.to_h).to have_keys(
 				::Signal.list.fetch("USR1") => be == handler
 			)
 		end
@@ -23,17 +23,17 @@ describe Async::Signals::Subscription do
 		it "normalizes string signal names" do
 			handler = proc{}
 			
-			subscription.trap("SIGUSR1", &handler)
+			handlers.trap("SIGUSR1", &handler)
 			
-			expect(subscription.traps).to have_keys(
+			expect(handlers.to_h).to have_keys(
 				::Signal.list.fetch("USR1") => be == handler
 			)
 		end
 		
 		it "stores nil for ignored signals" do
-			subscription.trap(:USR1)
+			handlers.trap(:USR1)
 			
-			expect(subscription.traps).to have_keys(
+			expect(handlers.to_h).to have_keys(
 				::Signal.list.fetch("USR1") => be_nil
 			)
 		end

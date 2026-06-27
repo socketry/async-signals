@@ -4,23 +4,23 @@ This guide explains how to use `async-signals` to coordinate process signal hand
 
 ## Usage
 
-Create a subscription:
+Create a handler set:
 
 ```ruby
 require "async/signals"
 
-subscription = Async::Signals.subscribe
+handlers = Async::Signals::Handlers.new
 
-subscription.trap(:TERM) do
+handlers.trap(:TERM) do
 	puts "Terminating..."
 end
 
-Async::Signals.install(subscription) do
-	# Signal traps are active here.
+Async::Signals.install(handlers) do
+	# Signal handlers are active here.
 	sleep
 end
 ```
 
-`Async::Signals` owns the process-wide `Signal.trap` entries. Each subscription contributes handlers while installed, allowing multiple consumers to receive overlapping signals without replacing each other's traps.
+`Async::Signals` owns the process-wide `Signal.trap` entries. Each handler set contributes handlers while installed, allowing multiple consumers to receive overlapping signals without replacing each other's traps.
 
-Use `Async::Signals.reset!` to remove active subscriptions and restore previous signal handlers. On Ruby implementations that support `Process._fork`, `async-signals` automatically resets inherited subscriptions in forked children.
+Use `Async::Signals.reset!` to remove active handlers and restore previous signal traps. On Ruby implementations that support `Process._fork`, `async-signals` automatically resets inherited handlers in forked children.

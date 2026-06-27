@@ -5,18 +5,18 @@
 
 require "thread"
 
-require_relative "subscription"
+require_relative "handlers"
 
 module Async
 	module Signals
-		# Coordinates process-wide signal traps for multiple subscribers.
+		# Coordinates process-wide signal handlers for multiple consumers.
 		class Controller
 			# Represents the active handlers for a single process signal.
 			class State
 				# Initialize the signal state.
 				# @parameter previous [Object] The signal handler that was installed before this controller took ownership.
 				# @parameter handlers [Array(Proc)] The active handlers for the signal.
-				# @parameter ignored [Integer] The number of active ignore subscriptions.
+				# @parameter ignored [Integer] The number of active ignored signals.
 				def initialize(previous, handlers = [].freeze, ignored = 0)
 					@previous = previous
 					@handlers = handlers
@@ -29,7 +29,7 @@ module Async
 				# @attribute [Array(Proc)] The active handlers for the signal.
 				attr :handlers
 				
-				# @attribute [Integer] The number of active ignore subscriptions.
+				# @attribute [Integer] The number of active ignored signals.
 				attr :ignored
 				
 				# Add a signal handler to this state.
@@ -44,7 +44,7 @@ module Async
 				end
 				
 				# Remove a signal handler from this state.
-				# @parameter handler [Proc | Nil] The handler to remove, or `nil` to remove an ignore subscription.
+				# @parameter handler [Proc | Nil] The handler to remove, or `nil` to remove an ignored signal.
 				# @returns [State] The updated state.
 				def remove(handler)
 					if handler
@@ -60,8 +60,8 @@ module Async
 					end
 				end
 				
-				# Whether this state has any active subscriptions.
-				# @returns [Boolean] True if no handlers or ignore subscriptions are active.
+				# Whether this state has any active handlers.
+				# @returns [Boolean] True if no handlers or ignored signals are active.
 				def empty?
 					@handlers.empty? && @ignored.zero?
 				end
@@ -71,17 +71,17 @@ module Async
 			class Registration
 				# Initialize the registration.
 				# @parameter controller [Controller] The controller that owns this registration.
-				# @parameter traps [Hash(Integer, Proc | Nil)] The traps that were installed.
-				def initialize(controller, traps)
+				# @parameter handlers [Hash(Integer, Proc | Nil)] The handlers that were installed.
+				def initialize(controller, handlers)
 					@controller = controller
-					@traps = traps
+					@handlers = handlers
 				end
 				
 				# Remove this registration from the controller.
 				def close
-					if traps = @traps
-						@traps = nil
-						@controller.remove(traps)
+					if handlers = @handlers
+						@handlers = nil
+						@controller.remove(handlers)
 					end
 				end
 			end
@@ -93,32 +93,26 @@ module Async
 				@dispatch = {}.freeze
 			end
 			
-			# Create a new signal subscription.
-			# @returns [Subscription] The new subscription.
-			def subscribe
-				Subscription.new
-			end
-			
-			# Install a subscription.
-			# @parameter subscription [Subscription] The subscription to install.
-			# @yields {|subscription| ...} The block to run while the subscription is installed.
+			# Install signal handlers.
+			# @parameter handlers [Handlers] The handlers to install.
+			# @yields {|handlers| ...} The block to run while the handlers are installed.
 			# @returns [Registration] The active registration.
-			def install(subscription)
-				traps = subscription.traps.dup.freeze
+			def install(handlers)
+				installed_handlers = handlers.to_h.freeze
 				
 				@mutex.synchronize do
-					traps.each do |signal, handler|
+					installed_handlers.each do |signal, handler|
 						add(signal, handler)
 					end
 					
 					update_dispatch
 				end
 				
-				registration = Registration.new(self, traps)
+				registration = Registration.new(self, installed_handlers)
 				
 				if block_given?
 					begin
-						return yield subscription
+						return yield handlers
 					ensure
 						registration.close
 					end
@@ -145,11 +139,11 @@ module Async
 				end
 			end
 			
-			# Remove a set of installed traps.
-			# @parameter traps [Hash(Integer, Proc | Nil)] The traps to remove.
-			def remove(traps)
+			# Remove a set of installed handlers.
+			# @parameter handlers [Hash(Integer, Proc | Nil)] The handlers to remove.
+			def remove(handlers)
 				@mutex.synchronize do
-					traps.each do |signal, handler|
+					handlers.each do |signal, handler|
 						remove_signal(signal, handler)
 					end
 					
@@ -157,7 +151,7 @@ module Async
 				end
 			end
 			
-			# Reset all installed signal traps to their previous handlers.
+			# Reset all installed signal handlers to their previous signal traps.
 			def reset!
 				@mutex.synchronize do
 					@states.each do |signal, state|
