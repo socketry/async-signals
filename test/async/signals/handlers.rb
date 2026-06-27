@@ -37,5 +37,28 @@ describe Async::Signals::Handlers do
 				::Signal.list.fetch("USR1") => be_nil
 			)
 		end
+		
+		it "normalizes integer signal names" do
+			handler = proc{}
+			signal = ::Signal.list.fetch("USR1")
+			
+			handlers.trap(signal, &handler)
+			
+			expect(handlers.to_h).to have_keys(
+				signal => be == handler
+			)
+		end
+		
+		it "rejects unsupported signal names" do
+			expect do
+				handlers.trap(:UNSUPPORTED)
+			end.to raise_exception(ArgumentError, message: be =~ /unsupported signal/)
+		end
+		
+		it "rejects unsupported signal types" do
+			expect do
+				handlers.trap(Object.new)
+			end.to raise_exception(ArgumentError, message: be =~ /bad signal type/)
+		end
 	end
 end

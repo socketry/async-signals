@@ -15,9 +15,9 @@ module Async
 			class State
 				# Initialize the signal state.
 				# @parameter previous [Object] The signal handler that was installed before this controller took ownership.
-				# @parameter handlers [Array(Proc)] The active handlers for the signal.
-				# @parameter ignored [Integer] The number of active ignored signals.
-				def initialize(previous, handlers = [].freeze, ignored = 0)
+				# @parameter handlers [Hash(Registration, Proc)] The active handlers for the signal.
+				# @parameter ignored [Hash(Registration, Nil)] The active ignored signals.
+				def initialize(previous, handlers = {}.compare_by_identity.freeze, ignored = {}.compare_by_identity.freeze)
 					@previous = previous
 					@handlers = handlers
 					@ignored = ignored
@@ -26,44 +26,57 @@ module Async
 				# @attribute [Object] The signal handler that was installed before this controller took ownership.
 				attr :previous
 				
-				# @attribute [Array(Proc)] The active handlers for the signal.
+				# @attribute [Hash(Registration, Proc)] The active handlers for the signal.
 				attr :handlers
 				
-				# @attribute [Integer] The number of active ignored signals.
+				# @attribute [Hash(Registration, Nil)] The active ignored signals.
 				attr :ignored
 				
 				# Add a signal handler to this state.
+				# @parameter registration [Registration] The registration that owns the handler.
 				# @parameter handler [Proc | Nil] The handler to add, or `nil` to ignore the signal.
 				# @returns [State] The updated state.
-				def add(handler)
+				def add(registration, handler)
 					if handler
-						State.new(@previous, (@handlers + [handler]).freeze, @ignored)
+						handlers = @handlers.dup
+						handlers[registration] = handler
+						
+						State.new(@previous, handlers.freeze, @ignored)
 					else
-						State.new(@previous, @handlers, @ignored + 1)
+						ignored = @ignored.dup
+						ignored[registration] = nil
+						
+						State.new(@previous, @handlers, ignored.freeze)
 					end
 				end
 				
 				# Remove a signal handler from this state.
-				# @parameter handler [Proc | Nil] The handler to remove, or `nil` to remove an ignored signal.
+				# @parameter registration [Registration] The registration that owns the handler.
 				# @returns [State] The updated state.
-				def remove(handler)
-					if handler
+				def remove(registration)
+					if @handlers.key?(registration)
 						handlers = @handlers.dup
+						handlers.delete(registration)
 						
-						if index = handlers.index(handler)
-							handlers.delete_at(index)
-						end
-						
-						State.new(@previous, handlers.freeze, @ignored)
+						return State.new(@previous, handlers.freeze, @ignored)
 					else
-						State.new(@previous, @handlers, @ignored - 1)
+						ignored = @ignored.dup
+						ignored.delete(registration)
+						
+						return State.new(@previous, @handlers, ignored.freeze)
 					end
 				end
 				
 				# Whether this state has any active handlers.
 				# @returns [Boolean] True if no handlers or ignored signals are active.
 				def empty?
-					@handlers.empty? && @ignored.zero?
+					@handlers.empty? && @ignored.empty?
+				end
+				
+				# The active callable signal handlers.
+				# @returns [Array(Proc)] The active handlers.
+				def callbacks
+					@handlers.values.freeze
 				end
 			end
 			
@@ -81,7 +94,7 @@ module Async
 				def close
 					if handlers = @handlers
 						@handlers = nil
-						@controller.remove(handlers)
+						@controller.remove(self, handlers)
 					end
 				end
 			end
@@ -99,16 +112,15 @@ module Async
 			# @returns [Registration] The active registration.
 			def install(handlers)
 				installed_handlers = handlers.to_h.freeze
+				registration = Registration.new(self, installed_handlers)
 				
 				@mutex.synchronize do
 					installed_handlers.each do |signal, handler|
-						add(signal, handler)
+						add(signal, registration, handler)
 					end
 					
 					update_dispatch
 				end
-				
-				registration = Registration.new(self, installed_handlers)
 				
 				if block_given?
 					begin
@@ -124,27 +136,22 @@ module Async
 			# Dispatch a signal to all currently active handlers.
 			# @parameter signal [Integer] The signal number to dispatch.
 			def dispatch(signal)
-				errors = nil
-				
 				@dispatch[signal]&.each do |handler|
 					begin
 						handler.call(signal)
 					rescue Exception => error
-						(errors ||= []) << error
+						warn "Async::Signals handler failed: #{error.class}: #{error.message}"
 					end
-				end
-				
-				if errors
-					raise errors.first
 				end
 			end
 			
 			# Remove a set of installed handlers.
+			# @parameter registration [Registration] The registration that owns the handlers.
 			# @parameter handlers [Hash(Integer, Proc | Nil)] The handlers to remove.
-			def remove(handlers)
+			def remove(registration, handlers)
 				@mutex.synchronize do
-					handlers.each do |signal, handler|
-						remove_signal(signal, handler)
+					handlers.each_key do |signal|
+						remove_signal(signal, registration)
 					end
 					
 					update_dispatch
@@ -165,20 +172,20 @@ module Async
 			
 			private
 			
-			def add(signal, handler)
+			def add(signal, registration, handler)
 				unless state = @states[signal]
 					previous = ::Signal.trap(signal, "IGNORE")
 					state = State.new(previous)
 				end
 				
-				@states[signal] = state.add(handler)
+				@states[signal] = state.add(registration, handler)
 				
 				update_signal(signal)
 			end
 			
-			def remove_signal(signal, handler)
+			def remove_signal(signal, registration)
 				if state = @states[signal]
-					state = state.remove(handler)
+					state = state.remove(registration)
 					
 					if state.empty?
 						::Signal.trap(signal, state.previous)
@@ -205,7 +212,7 @@ module Async
 			def update_dispatch
 				@dispatch = @states.each_with_object({}) do |(signal, state), dispatch|
 					unless state.handlers.empty?
-						dispatch[signal] = state.handlers
+						dispatch[signal] = state.callbacks
 					end
 				end.freeze
 			end

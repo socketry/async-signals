@@ -69,6 +69,26 @@ describe Async::Signals do
 			end
 		end
 		
+		it "is invoked by the fork hook" do
+			skip "Process._fork is not supported." unless defined?(subject::ForkHook)
+			
+			process = Class.new do
+				def _fork
+					0
+				end
+			end
+			
+			process.prepend(subject::ForkHook)
+			
+			mock(subject) do |mock|
+				mock.replace(:reset!) do
+					:reset
+				end
+				
+				expect(process.new._fork).to be == 0
+			end
+		end
+		
 		it "is invoked after fork" do
 			skip "Process._fork is not supported." unless ::Process.respond_to?(:_fork)
 			

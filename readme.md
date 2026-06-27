@@ -2,28 +2,60 @@
 
 Composable process signal handling for Ruby.
 
+[![Development Status](https://github.com/socketry/async-signals/workflows/Test/badge.svg)](https://github.com/socketry/async-signals/actions?workflow=Test)
+
+## Features
+
+  - Coordinates process-wide signal traps across multiple consumers.
+  - Supports overlapping signal handlers without replacing each other.
+  - Supports scoped ignore handlers for specific signals.
+  - Restores previous signal traps when handlers are removed.
+  - Resets inherited signal state in forked children on Ruby implementations with `Process._fork`.
+
 ## Usage
 
-Create one handler set per signal consumer:
+Please see the [project documentation](https://socketry.github.io/async-signals/) for more details.
 
-```ruby
-require "async/signals"
-
-handlers = Async::Signals::Handlers.new
-handlers.trap(:INT) do
-	puts "Interrupted!"
-end
-
-Async::Signals.install(handlers) do
-	# Signal handlers are active here.
-	sleep
-end
-```
-
-Multiple handler sets can listen for overlapping signals. `Async::Signals` installs one Ruby signal trap per process signal and fans delivery out to the active handlers.
-
-Use `Async::Signals.reset!` to remove active handlers and restore previous signal traps. On Ruby implementations that support `Process._fork`, `async-signals` automatically resets inherited handlers in forked children.
+  - [Getting Started](https://socketry.github.io/async-signals/guides/getting-started/index) - This guide explains how to get started with `async-signals`.
 
 ## Releases
 
-Please see the [project releases](releases.md) for all releases.
+Please see the [project releases](https://socketry.github.io/async-signals/releases/index) for all releases.
+
+### Unreleased
+
+  - Initial release.
+
+## Contributing
+
+We welcome contributions to this project.
+
+1.  Fork it.
+2.  Create your feature branch (`git checkout -b my-new-feature`).
+3.  Commit your changes (`git commit -am 'Add some feature'`).
+4.  Push to the branch (`git push origin my-new-feature`).
+5.  Create new Pull Request.
+
+### Running Tests
+
+To run the test suite:
+
+``` shell
+bundle exec sus
+```
+
+### Making Releases
+
+To make a new release:
+
+``` shell
+bundle exec bake gem:release:patch # or minor or major
+```
+
+### Developer Certificate of Origin
+
+In order to protect users of this project, we require all contributors to comply with the [Developer Certificate of Origin](https://developercertificate.org/). This ensures that all contributions are properly licensed and attributed.
+
+### Community Guidelines
+
+This project is best served by a collaborative and respectful environment. Treat each other professionally, respect differing viewpoints, and engage constructively. Harassment, discrimination, or harmful behavior is not tolerated. Communicate clearly, listen actively, and support one another. If any issues arise, please inform the project maintainers.
