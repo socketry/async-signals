@@ -24,4 +24,5 @@ group :test do
 	gem "covered"
 	
 	gem "bake-test"
+	gem "bake-test-external"
 end
