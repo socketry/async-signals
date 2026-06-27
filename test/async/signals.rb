@@ -6,7 +6,11 @@
 require "async/signals"
 require "rbconfig"
 
+require_relative "signals/queue_assertions"
+
 describe Async::Signals do
+	include Async::Signals::QueueAssertions
+	
 	it "has a version number" do
 		expect(subject::VERSION).to be_a(String)
 	end
@@ -30,7 +34,7 @@ describe Async::Signals do
 			subject.install(handlers) do
 				::Process.kill(:USR1, ::Process.pid)
 				
-				expect(events.pop).to be == ::Signal.list.fetch("USR1")
+				expect_event(events).to be == ::Signal.list.fetch("USR1")
 			end
 		end
 		
@@ -59,9 +63,7 @@ describe Async::Signals do
 				
 				::Process.kill(:USR1, ::Process.pid)
 				
-				expect do
-					events.pop(true)
-				end.to raise_exception(ThreadError)
+				expect_no_event(events)
 				
 				registration.close
 			ensure

@@ -6,7 +6,11 @@
 require "async/signals/controller"
 require "async/signals/handlers"
 
+require_relative "queue_assertions"
+
 describe Async::Signals::Controller do
+	include Async::Signals::QueueAssertions
+	
 	let(:controller) {subject.new}
 	
 	it "can deliver one signal to one handler set" do
@@ -20,7 +24,7 @@ describe Async::Signals::Controller do
 		controller.install(handlers) do
 			::Process.kill(:USR1, ::Process.pid)
 			
-			expect(events.pop).to be == ::Signal.list.fetch("USR1")
+			expect_event(events).to be == ::Signal.list.fetch("USR1")
 		end
 	end
 	
@@ -42,8 +46,8 @@ describe Async::Signals::Controller do
 			controller.install(second_handlers) do
 				::Process.kill(:USR1, ::Process.pid)
 				
-				expect(first.pop).to be == ::Signal.list.fetch("USR1")
-				expect(second.pop).to be == ::Signal.list.fetch("USR1")
+				expect_event(first).to be == ::Signal.list.fetch("USR1")
+				expect_event(second).to be == ::Signal.list.fetch("USR1")
 			end
 		end
 	end
@@ -65,14 +69,12 @@ describe Async::Signals::Controller do
 		controller.install(first_handlers) do
 			controller.install(second_handlers) do
 				::Process.kill(:USR1, ::Process.pid)
-				expect(first.pop).to be == ::Signal.list.fetch("USR1")
+				expect_event(first).to be == ::Signal.list.fetch("USR1")
 				
 				::Process.kill(:USR2, ::Process.pid)
-				expect(second.pop).to be == ::Signal.list.fetch("USR2")
+				expect_event(second).to be == ::Signal.list.fetch("USR2")
 				
-				expect do
-					first.pop(true)
-				end.to raise_exception(ThreadError)
+				expect_no_event(first)
 			end
 		end
 	end
@@ -103,7 +105,7 @@ describe Async::Signals::Controller do
 			controller.install(handled) do
 				::Process.kill(:USR1, ::Process.pid)
 				
-				expect(events.pop).to be == ::Signal.list.fetch("USR1")
+				expect_event(events).to be == ::Signal.list.fetch("USR1")
 			end
 		end
 	end
@@ -128,15 +130,13 @@ describe Async::Signals::Controller do
 			
 			::Process.kill(:USR1, ::Process.pid)
 			
-			expect do
-				events.pop(true)
-			end.to raise_exception(ThreadError)
+			expect_no_event(events)
 			
 			second_registration.close
 			
 			::Process.kill(:USR1, ::Process.pid)
 			
-			expect(events.pop).to be == :handled
+			expect_event(events).to be == :handled
 		ensure
 			::Signal.trap(:USR1, original)
 		end
@@ -177,9 +177,7 @@ describe Async::Signals::Controller do
 			
 			::Process.kill(:USR1, ::Process.pid)
 			
-			expect do
-				events.pop(true)
-			end.to raise_exception(ThreadError)
+			expect_no_event(events)
 		ensure
 			::Signal.trap(:USR1, original)
 		end
@@ -205,11 +203,9 @@ describe Async::Signals::Controller do
 			
 			::Process.kill(:USR1, ::Process.pid)
 			
-			expect(events.pop).to be == ::Signal.list.fetch("USR1")
+			expect_event(events).to be == ::Signal.list.fetch("USR1")
 			
-			expect do
-				events.pop(true)
-			end.to raise_exception(ThreadError)
+			expect_no_event(events)
 		ensure
 			second_registration.close
 		end
@@ -242,8 +238,8 @@ describe Async::Signals::Controller do
 			end
 		end
 		
-		expect(warnings.pop).to be(:include?, "Async::Signals handler failed: RuntimeError: handler failed")
-		expect(handled.pop).to be == ::Signal.list.fetch("USR1")
+		expect_event(warnings).to be(:include?, "Async::Signals handler failed: RuntimeError: handler failed")
+		expect_event(handled).to be == ::Signal.list.fetch("USR1")
 	end
 	
 	it "restores previous signal handlers" do
@@ -259,14 +255,12 @@ describe Async::Signals::Controller do
 			controller.install(handlers) do
 				::Process.kill(:USR1, ::Process.pid)
 				
-				expect do
-					previous.pop(true)
-				end.to raise_exception(ThreadError)
+				expect_no_event(previous)
 			end
 			
 			::Process.kill(:USR1, ::Process.pid)
 			
-			expect(previous.pop).to be == :handled
+			expect_event(previous).to be == :handled
 		ensure
 			::Signal.trap(:USR1, original)
 		end
