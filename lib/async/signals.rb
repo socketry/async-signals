@@ -6,6 +6,7 @@
 require_relative "signals/version"
 require_relative "signals/handlers"
 require_relative "signals/controller"
+require_relative "signals/ignore"
 
 module Async
 	# Provides composable process signal handling.
@@ -16,6 +17,16 @@ module Async
 		# @returns [Controller] The default signal controller.
 		def self.controller
 			CONTROLLER
+		end
+		
+		# The default signal backend for the current thread.
+		# @returns [Async::Signals | Async::Signals::Ignore] The default signal backend.
+		def self.default
+			if ::Thread.current == ::Thread.main
+				self
+			else
+				Ignore
+			end
 		end
 		
 		# Install signal handlers using the process-wide signal controller.

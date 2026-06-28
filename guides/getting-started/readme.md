@@ -25,6 +25,7 @@ Ruby signal handlers are process-wide. Calling `Signal.trap` for the same signal
 - {ruby Async::Signals::Handlers} represents a configurable set of signal handlers for one consumer.
 - {ruby Async::Signals::Controller} owns the process-wide `Signal.trap` entries while handler sets are installed.
 - {ruby Async::Signals.install} installs a handler set using the default process-wide controller.
+- {ruby Async::Signals::Ignore} provides a no-op signal backend for code that should not install process signal traps.
 - {ruby Async::Signals.reset!} removes all active handlers and restores the previous signal traps.
 
 Each handler set can trap or ignore signals independently. When multiple handler sets trap the same signal, `async-signals` installs one Ruby signal trap and dispatches the signal to each active handler.
@@ -127,6 +128,26 @@ end
 ```
 
 The installed handlers are snapshotted when they are installed. Later changes to the handler set do not affect an existing registration.
+
+### Choosing a Signal Backend
+
+Use {ruby Async::Signals.default} when a component should install process signal handlers only while running on the main thread. It returns {ruby Async::Signals} on the main thread and {ruby Async::Signals::Ignore} on other threads.
+
+```ruby
+require "async/signals"
+
+handlers = Async::Signals::Handlers.new
+handlers.trap(:TERM) do
+	puts "Stopping..."
+end
+
+Async::Signals.default.install(handlers) do
+	# Process signal handlers are active only on the main thread.
+	sleep
+end
+```
+
+Use {ruby Async::Signals::Ignore} directly when a component is controlled by its parent and should not subscribe to process-wide signals.
 
 ## Forking
 
