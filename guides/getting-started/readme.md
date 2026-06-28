@@ -55,6 +55,14 @@ end
 
 When the block exits, the handler set is removed and any previous signal trap is restored.
 
+Handlers may also accept the context that installed the handler set. This is useful when a signal should interrupt the component that installed the handlers, regardless of which thread dispatches the signal trap.
+
+```ruby
+handlers.trap(:INT) do |signal, context|
+	context.raise(Interrupt)
+end
+```
+
 ### Multiple Consumers
 
 Multiple parts of an application can listen for the same signal. This is useful when a service, supervisor, and application component each need to observe shutdown signals without taking ownership of the process-wide trap.
@@ -168,6 +176,8 @@ Use block-form installation when possible so registrations are closed automatica
 Avoid calling `Signal.trap` for the same signals while `async-signals` handlers are installed. Direct calls to `Signal.trap` replace process-wide traps and can bypass the controller.
 
 Keep signal handlers thread safe. Ruby implementations may dispatch signal traps from an implementation-specific thread, so handlers should avoid mutating shared state directly. Prefer doing minimal work in the handler and forwarding the event to a thread-safe mechanism such as `Thread::Queue`.
+
+Handler exceptions propagate from dispatch. If multiple handler sets observe the same signal and one handler raises, later handlers may not run.
 
 ## Troubleshooting
 
