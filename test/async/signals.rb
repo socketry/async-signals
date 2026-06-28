@@ -22,6 +22,20 @@ describe Async::Signals do
 		end
 	end
 	
+	with ".default" do
+		it "returns process signals on the main thread" do
+			expect(subject.default).to be == subject
+		end
+		
+		it "ignores process signals on other threads" do
+			default = ::Thread.new do
+				subject.default
+			end.value
+			
+			expect(default).to be == subject::Ignore
+		end
+	end
+	
 	with ".install" do
 		it "installs handlers using the default controller" do
 			events = ::Thread::Queue.new

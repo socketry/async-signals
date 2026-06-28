@@ -235,11 +235,11 @@ describe Async::Signals::Controller do
 				expect do
 					::Process.kill(:USR1, ::Process.pid)
 				end.not.to raise_exception
+				
+				expect_event(warnings).to be(:include?, "Async::Signals handler failed: RuntimeError: handler failed")
+				expect_event(handled).to be == ::Signal.list.fetch("USR1")
 			end
 		end
-		
-		expect_event(warnings).to be(:include?, "Async::Signals handler failed: RuntimeError: handler failed")
-		expect_event(handled).to be == ::Signal.list.fetch("USR1")
 	end
 	
 	it "restores previous signal handlers" do

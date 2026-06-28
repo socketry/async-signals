@@ -9,6 +9,7 @@ Composable process signal handling for Ruby.
   - Coordinates process-wide signal traps across multiple consumers.
   - Supports overlapping signal handlers without replacing each other.
   - Supports scoped ignore handlers for specific signals.
+  - Provides a no-op signal backend for components that should not install process signal traps.
   - Restores previous signal traps when handlers are removed.
   - Resets inherited signal state in forked children on Ruby implementations with `Process._fork`.
   - Documents thread-safe signal handler design for portable signal delivery.
@@ -22,6 +23,10 @@ Please see the [project documentation](https://socketry.github.io/async-signals/
 ## Releases
 
 Please see the [project releases](https://socketry.github.io/async-signals/releases/index) for all releases.
+
+### Unreleased
+
+  - Add `Async::Signals.default` and `Async::Signals::Ignore` for selecting process signal handling based on the current thread.
 
 ### v0.1.0
 
