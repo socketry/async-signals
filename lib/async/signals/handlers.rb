@@ -16,6 +16,7 @@ module Async
 			
 			# Trap a signal while these handlers are installed.
 			# @parameter signal [Symbol | String | Integer] The signal to trap.
+			# @yields {|signal, context| ...} The signal number and the context that installed the handler set.
 			def trap(signal, &block)
 				@signals[normalize(signal)] = block
 			end

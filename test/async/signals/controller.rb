@@ -52,6 +52,43 @@ describe Async::Signals::Controller do
 		end
 	end
 	
+	it "passes the installing context to handlers" do
+		exception = Class.new(StandardError)
+		events = ::Thread::Queue.new
+		ready = ::Thread::Queue.new
+		release = ::Thread::Queue.new
+		
+		handlers = Async::Signals::Handlers.new
+		handlers.trap(:USR1) do |signal, context|
+			events << signal
+			context.raise(exception)
+		end
+		
+		thread = ::Thread.new do
+			begin
+				controller.install(handlers) do
+					ready << true
+					release.pop
+				end
+			rescue exception
+				events << :interrupted
+			end
+		end
+		
+		begin
+			ready.pop(timeout: 1)
+			
+			controller.dispatch("USR1")
+			
+			expect_event(events).to be == ::Signal.list.fetch("USR1")
+			expect_event(events).to be == :interrupted
+		ensure
+			release << nil
+			thread.join(1)
+			thread.kill if thread.alive?
+		end
+	end
+	
 	it "can deliver different signals to different handler sets" do
 		first = ::Thread::Queue.new
 		second = ::Thread::Queue.new
@@ -211,8 +248,7 @@ describe Async::Signals::Controller do
 		end
 	end
 	
-	it "warns about handler errors and continues dispatching" do
-		warnings = ::Thread::Queue.new
+	it "propagates handler errors" do
 		error = RuntimeError.new("handler failed")
 		
 		failing_handlers = Async::Signals::Handlers.new
@@ -220,25 +256,10 @@ describe Async::Signals::Controller do
 			raise error
 		end
 		
-		handled = ::Thread::Queue.new
-		handled_handlers = Async::Signals::Handlers.new
-		handled_handlers.trap(:USR1) do |signal|
-			handled << signal
-		end
-		
-		controller.define_singleton_method(:warn) do |message|
-			warnings << message
-		end
-		
 		controller.install(failing_handlers) do
-			controller.install(handled_handlers) do
-				expect do
-					::Process.kill(:USR1, ::Process.pid)
-				end.not.to raise_exception
-				
-				expect_event(warnings).to be(:include?, "Async::Signals handler failed: RuntimeError: handler failed")
-				expect_event(handled).to be == ::Signal.list.fetch("USR1")
-			end
+			expect do
+				controller.dispatch("USR1")
+			end.to raise_exception(RuntimeError, message: be == error.message)
 		end
 	end
 	

@@ -6,6 +6,7 @@
 require "thread"
 
 require_relative "handlers"
+require_relative "context"
 
 module Async
 	module Signals
@@ -74,9 +75,11 @@ module Async
 				end
 				
 				# The active callable signal handlers.
-				# @returns [Array(Proc)] The active handlers.
+				# @returns [Array(Array(Proc, Context))] The active handlers and the contexts that installed them.
 				def callbacks
-					@handlers.values.freeze
+					@handlers.map do |registration, handler|
+						[handler, registration.context]
+					end.freeze
 				end
 			end
 			
@@ -88,7 +91,11 @@ module Async
 				def initialize(controller, handlers)
 					@controller = controller
 					@handlers = handlers
+					@context = Context.new
 				end
+				
+				# @attribute [Context] The context that installed this registration.
+				attr :context
 				
 				# Remove this registration from the controller.
 				def close
@@ -138,12 +145,8 @@ module Async
 			def dispatch(signal)
 				number = ::Signal.list.fetch(signal)
 				
-				@dispatch[signal]&.each do |handler|
-					begin
-						handler.call(number)
-					rescue Exception => error
-						warn "Async::Signals handler failed: #{error.class}: #{error.message}"
-					end
+				@dispatch[signal]&.each do |handler, context|
+					handler.call(number, context)
 				end
 			end
 			

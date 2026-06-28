@@ -4,6 +4,7 @@
 # Copyright, 2026, by Samuel Williams.
 
 require_relative "signals/version"
+require_relative "signals/context"
 require_relative "signals/handlers"
 require_relative "signals/controller"
 require_relative "signals/ignore"
