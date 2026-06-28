@@ -1,6 +1,6 @@
 # Releases
 
-## Unreleased
+## v0.3.0
 
   - Pass the installing context as the second signal handler argument and allow handler exceptions to propagate.
 
