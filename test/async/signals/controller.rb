@@ -5,6 +5,7 @@
 
 require "async/signals/controller"
 require "async/signals/handlers"
+require "async/signals/reset"
 
 require_relative "queue_assertions"
 
@@ -283,6 +284,46 @@ describe Async::Signals::Controller do
 			
 			expect_event(previous).to be == :handled
 		ensure
+			::Signal.trap(:USR1, original)
+		end
+	end
+	
+	it "restores reset traps without installed handlers" do
+		events = ::Thread::Queue.new
+		original = ::Signal.trap(:USR1, "IGNORE")
+		
+		begin
+			Async::Signals::Reset.trap(:USR1) do
+				events << :handled
+			end
+			
+			controller.reset!
+			
+			::Process.kill(:USR1, ::Process.pid)
+			
+			expect_event(events).to be == :handled
+		ensure
+			Async::Signals::Reset.clear
+			::Signal.trap(:USR1, original)
+		end
+	end
+	
+	it "restores ignored reset traps" do
+		events = ::Thread::Queue.new
+		original = ::Signal.trap(:USR1) do
+			events << :handled
+		end
+		
+		begin
+			Async::Signals::Reset.trap(:USR1)
+			
+			controller.reset!
+			
+			::Process.kill(:USR1, ::Process.pid)
+			
+			expect_no_event(events)
+		ensure
+			Async::Signals::Reset.clear
 			::Signal.trap(:USR1, original)
 		end
 	end
