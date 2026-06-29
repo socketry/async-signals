@@ -175,5 +175,36 @@ describe Async::Signals do
 			
 			expect(system(::RbConfig.ruby, "-Ilib", "-e", script)).to be == true
 		end
+		
+		it "restores reset traps after fork" do
+			skip "Process._fork is not supported." unless ::Process.respond_to?(:_fork)
+			
+			script = <<~RUBY
+				require "async/signals"
+				
+				input, output = IO.pipe
+				
+				Async::Signals::Reset.trap(:USR1) do
+					output.write("handled")
+					output.flush
+				end
+				
+				pid = Process.fork do
+					input.close
+					
+					Process.kill(:USR1, Process.pid)
+					
+					output.close
+					exit!(0)
+				end
+				
+				output.close
+				Process.wait(pid)
+				
+				exit!(input.read == "handled" ? 0 : 1)
+			RUBY
+			
+			expect(system(::RbConfig.ruby, "-Ilib", "-e", script)).to be == true
+		end
 	end
 end

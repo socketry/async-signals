@@ -7,6 +7,7 @@ require "thread"
 
 require_relative "handlers"
 require_relative "context"
+require_relative "reset"
 
 module Async
 	module Signals
@@ -163,11 +164,17 @@ module Async
 				end
 			end
 			
-			# Reset all installed signal handlers to their previous signal traps.
+			# Reset all installed signal handlers to their reset traps or previous signal traps.
 			def reset!
 				@mutex.synchronize do
-					@states.each do |signal, state|
-						::Signal.trap(signal, state.previous)
+					reset_handlers = Reset.to_h
+					
+					(@states.keys | reset_handlers.keys).each do |signal|
+						if reset_handlers.key?(signal)
+							::Signal.trap(signal, reset_handlers.fetch(signal))
+						else
+							::Signal.trap(signal, @states.fetch(signal).previous)
+						end
 					end
 					
 					@states.clear

@@ -6,6 +6,7 @@
 require_relative "signals/version"
 require_relative "signals/context"
 require_relative "signals/handlers"
+require_relative "signals/reset"
 require_relative "signals/controller"
 require_relative "signals/ignore"
 
