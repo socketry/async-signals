@@ -1,6 +1,6 @@
 # Releases
 
-## Unreleased
+## v0.6.0
 
   - Add `async/signals/graceful` for installing default `SIGINT` and `SIGTERM` handlers that raise `Interrupt`.
 
