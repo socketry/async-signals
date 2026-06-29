@@ -1,5 +1,9 @@
 # Releases
 
+## Unreleased
+
+  - Add `async/signals/graceful` for installing default `SIGINT` and `SIGTERM` handlers that raise `Interrupt`.
+
 ## v0.5.0
 
   - Change `Async::Signals.default` to select process signal handling only on the main thread when no fiber scheduler is installed.
