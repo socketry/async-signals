@@ -24,6 +24,10 @@ Please see the [project documentation](https://socketry.github.io/async-signals/
 
 Please see the [project releases](https://socketry.github.io/async-signals/releases/index) for all releases.
 
+### v0.5.0
+
+  - Change `Async::Signals.default` to select process signal handling only on the main thread when no fiber scheduler is installed.
+
 ### v0.4.0
 
   - Use `Fiber::Scheduler#fiber_interrupt` from `Context#raise` when available, falling back to `Thread#raise`.

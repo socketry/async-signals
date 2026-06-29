@@ -1,6 +1,6 @@
 # Releases
 
-## Unreleased
+## v0.5.0
 
   - Change `Async::Signals.default` to select process signal handling only on the main thread when no fiber scheduler is installed.
 
