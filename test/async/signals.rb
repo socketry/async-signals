@@ -11,6 +11,34 @@ require_relative "signals/queue_assertions"
 describe Async::Signals do
 	include Async::Signals::QueueAssertions
 	
+	def make_scheduler
+		Object.new.tap do |scheduler|
+			scheduler.define_singleton_method(:block) do |*|
+			end
+			
+			scheduler.define_singleton_method(:unblock) do |*|
+			end
+			
+			scheduler.define_singleton_method(:kernel_sleep) do |*|
+			end
+			
+			scheduler.define_singleton_method(:io_wait) do |*|
+			end
+			
+			scheduler.define_singleton_method(:fiber_interrupt) do |*|
+			end
+		end
+	end
+	
+	def with_scheduler
+		previous_scheduler = ::Fiber.scheduler
+		::Fiber.set_scheduler(make_scheduler)
+		
+		yield
+	ensure
+		::Fiber.set_scheduler(previous_scheduler)
+	end
+	
 	it "has a version number" do
 		expect(subject::VERSION).to be_a(String)
 	end
@@ -23,16 +51,24 @@ describe Async::Signals do
 	end
 	
 	with ".default" do
-		it "returns process signals on the main thread" do
+		it "returns process signals on the main thread without a scheduler" do
 			expect(subject.default).to be == subject
 		end
 		
-		it "ignores process signals on other threads" do
+		it "ignores process signals outside the top level" do
 			default = ::Thread.new do
 				subject.default
 			end.value
 			
 			expect(default).to be == subject::Ignore
+		end
+		
+		it "ignores process signals when a scheduler is installed" do
+			skip "Fiber.set_scheduler is not supported." unless ::Fiber.respond_to?(:set_scheduler)
+			
+			with_scheduler do
+				expect(subject.default).to be == subject::Ignore
+			end
 		end
 	end
 	

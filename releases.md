@@ -1,5 +1,9 @@
 # Releases
 
+## Unreleased
+
+  - Change `Async::Signals.default` to select process signal handling only on the main thread when no fiber scheduler is installed.
+
 ## v0.4.0
 
   - Use `Fiber::Scheduler#fiber_interrupt` from `Context#raise` when available, falling back to `Thread#raise`.
