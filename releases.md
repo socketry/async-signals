@@ -1,5 +1,9 @@
 # Releases
 
+## Unreleased
+
+  - Use `Fiber::Scheduler#fiber_interrupt` from `Context#raise` when available, falling back to `Thread#raise`.
+
 ## v0.3.0
 
   - Pass the installing context as the second signal handler argument and allow handler exceptions to propagate.

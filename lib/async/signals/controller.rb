@@ -91,7 +91,7 @@ module Async
 				def initialize(controller, handlers)
 					@controller = controller
 					@handlers = handlers
-					@context = Context.new
+					@context = Context.current
 				end
 				
 				# @attribute [Context] The context that installed this registration.
