@@ -20,14 +20,17 @@ module Async
 			CONTROLLER
 		end
 		
-		# The default signal backend for the current thread.
+		# The default signal backend for the current context.
 		# @returns [Async::Signals | Async::Signals::Ignore] The default signal backend.
 		def self.default
 			if ::Thread.current == ::Thread.main
-				self
-			else
-				Ignore
+				# TruffleRuby does not currently expose `Fiber.scheduler`:
+				unless ::Fiber.respond_to?(:scheduler) && ::Fiber.scheduler
+					return self
+				end
 			end
+			
+			return Ignore
 		end
 		
 		# Install signal handlers using the process-wide signal controller.

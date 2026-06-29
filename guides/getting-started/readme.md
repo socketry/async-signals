@@ -139,7 +139,7 @@ The installed handlers are snapshotted when they are installed. Later changes to
 
 ### Choosing a Signal Backend
 
-Use {ruby Async::Signals.default} when a component should install process signal handlers only while running on the main thread. It returns {ruby Async::Signals} on the main thread and {ruby Async::Signals::Ignore} on other threads.
+Use {ruby Async::Signals.default} when a component should install process signal handlers only when it appears to own the process signal boundary. It returns {ruby Async::Signals} on the main thread when no fiber scheduler is installed, and {ruby Async::Signals::Ignore} otherwise.
 
 ```ruby
 require "async/signals"
@@ -150,12 +150,52 @@ handlers.trap(:TERM) do
 end
 
 Async::Signals.default.install(handlers) do
-	# Process signal handlers are active only on the main thread.
+	# Process signal handlers are active only when using the default signal backend.
 	sleep
 end
 ```
 
 Use {ruby Async::Signals::Ignore} directly when a component is controlled by its parent and should not subscribe to process-wide signals.
+
+### Using Signals with Async
+
+When a component runs inside an existing Async event loop, it should not implicitly take ownership of process-wide signals. In that case, {ruby Async::Signals.default} returns {ruby Async::Signals::Ignore}, so installing handlers through the default backend becomes a no-op.
+
+```ruby
+require "async"
+require "async/signals"
+
+handlers = Async::Signals::Handlers.new
+handlers.trap(:TERM) do
+	puts "Stopping..."
+end
+
+Async do
+	Async::Signals.default.install(handlers) do
+		# No process signal traps are installed here.
+		sleep
+	end
+end
+```
+
+If a component running inside an Async event loop is intended to own process signal handling, pass {ruby Async::Signals} explicitly instead of using the default backend.
+
+```ruby
+require "async"
+require "async/signals"
+
+handlers = Async::Signals::Handlers.new
+handlers.trap(:TERM) do |signal, context|
+	context.raise(Interrupt)
+end
+
+Async do
+	Async::Signals.install(handlers) do
+		# Process signal traps are explicitly installed here.
+		sleep
+	end
+end
+```
 
 ## Forking
 
